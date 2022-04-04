@@ -18,6 +18,10 @@ package com.stability;/*
 		       */
 
 // Generated code
+import org.apache.thrift.async.AsyncMethodCallback;
+import org.apache.thrift.async.TAsyncClientManager;
+import org.apache.thrift.server.TSaslNonblockingServer;
+import org.apache.thrift.transport.*;
 import tutorial.*;
 import shared.*;
 
@@ -32,20 +36,15 @@ import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import java.util.*;
 
+import java.io.IOException;
 import java.util.Random;
 
 public class JavaClient {
-	public static void main(String [] args) {
-
-		if (args.length != 1) {
-			System.out.println("Please enter 'simple' or 'secure'");
-			System.exit(0);
-		}
-
+	public static void main(String [] args) throws Exception {
 		try {
-			TTransport transport;
+			TNonblockingTransport transport;
 			if (args[0].contains("simple")) {
-				transport = new TSocket("localhost", 9090);
+				transport = new TNonblockingSocket("localhost", 9090);
 				transport.open();
 			}
 			else {
@@ -61,20 +60,22 @@ public class JavaClient {
 				 * Get a client transport instead of a server transport. The connection is opened on
 				 * invocation of the factory method, no need to specifically call open()
 				 */
-				transport = TSSLTransportFactory.getClientSocket("localhost", 9091, 0, params);
-			}
-
-			TProtocol protocol = new  TBinaryProtocol(transport);
-			Calculator.Client client = new Calculator.Client(protocol);
-
-			perform(client);
-
-			transport.close();
-		} catch (TException x) {
-			x.printStackTrace();
+				throw new Exception();
+	//                transport = TSSLTransportFactory.getClientSocket("localhost", 9091, 0, params);
 		}
-	}
 
+//            TProtocol protocol = new  TBinaryProtocol(transport);
+		Calculator.AsyncClient client = new Calculator.AsyncClient(new TBinaryProtocol.Factory(),
+				new TAsyncClientManager(),
+				transport);
+
+		perform(client);
+
+		transport.close();
+	} catch (TException | IOException x) {
+		x.printStackTrace();
+	}
+}
 	public static String getRandomString(int len) {
 		String SALTCHARS = "abcdef1234567890";
 		StringBuilder salt = new StringBuilder();
@@ -105,23 +106,33 @@ public class JavaClient {
 			.max().getAsDouble();
 	}
 
-	private static void perform(Calculator.Client client) throws TException
+	private static void perform(Calculator.AsyncClient client) throws TException
 	{
 		for (int j=0; j<10; j++){
 			ArrayList<Double> ar = new ArrayList();
 			for (int i=0; i<1000; i++) {
 				Long tim1 = System.nanoTime();
-				String s = client.ping(getRandomString(256 * 1024));
+				client.ping(getRandomString(128 * 1024), new AsyncMethodCallback<String>() {
+					@Override
+					public void onComplete(String s) {
+						System.out.println("received " + s);
+					}
+
+					@Override
+					public void onError(Exception e) {
+
+					}
+				});
 				Long tim2 = System.nanoTime();
 //				System.out.println((tim2-tim1)/1_000_000.0);
 				if (i > 50)
 					ar.add((tim2-tim1)/1_000_000.0);
 				//System.out.println("ping() " + s);
-				try{
-					Thread.sleep(50);
-				} catch (Exception e){
-
-				}
+//				try{
+//					Thread.sleep(50);
+//				} catch (Exception e){
+//
+//				}
 			}
 			System.out.printf("%f\t%f\t%f\n", min(ar), avg(ar), max(ar));
 		}
