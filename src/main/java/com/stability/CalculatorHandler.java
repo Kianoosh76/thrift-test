@@ -34,8 +34,8 @@ public class CalculatorHandler implements Calculator.Iface {
     }
 
     public String ping(String message) {
-        System.out.println("ping()" + message);
-        return message + "received";
+        System.out.println("ping()" + message.indexOf("kianoosh"));
+        return "received";
     }
 
     public int add(int n1, int n2) {
